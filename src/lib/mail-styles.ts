@@ -35,7 +35,7 @@ export const MAIL_CSS = `
  --l-bg:#181e36;--l-tex:${NOISE},${STARS};--l-ink:#e0e7ff;--l-accent:#a5b4fc;--l-font:"Fraunces",Georgia,serif;--l-head:"Fraunces",Georgia,serif;--l-border:1px solid rgba(165,180,252,.25);--l-div:"· ☾ ·"}
 
 .env-scene{perspective:1200px;width:min(340px,86vw);aspect-ratio:3/2;position:relative;margin-top:110px}
-.env{position:absolute;inset:0;cursor:pointer;transform-style:preserve-3d;transition:transform .4s ease;filter:drop-shadow(0 30px 40px rgba(0,0,0,.5)) drop-shadow(0 8px 12px rgba(0,0,0,.3))}
+.env{position:absolute;inset:0;cursor:pointer;transform-style:preserve-3d;transition:transform .4s ease;filter:drop-shadow(0 22px 26px rgba(0,0,0,.45)) drop-shadow(0 6px 8px rgba(0,0,0,.3))}
 .env:not(.is-flap):hover{transform:translateY(-4px) rotate(-.6deg)}
 .env-back,.env-pocket,.env-flap-face{background-color:var(--env-bg);background-image:var(--env-tex)}
 .env-back{position:absolute;inset:0;border-radius:6px;filter:brightness(.78)}
@@ -60,7 +60,7 @@ export const MAIL_CSS = `
  background:var(--l-bg);color:var(--l-accent);outline:2px dashed var(--env-line);outline-offset:-4px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
 .env-mark{position:absolute;right:42px;top:20px;z-index:4;width:58px;height:58px;border-radius:50%;border:2px solid var(--env-ink);opacity:.22;box-shadow:0 0 0 6px transparent,0 0 0 8px currentColor;color:var(--env-ink)}
 .env-addr{position:absolute;left:12%;bottom:16%;z-index:4;font-family:var(--l-head);color:var(--env-ink);font-size:17px;opacity:.85}
-.mt-parchment .env-back,.mt-parchment .env-pocket{-webkit-mask:radial-gradient(circle at 3px 3px,transparent 1.5px,#000 2px) -3px -3px/7px 7px}
+.mt-parchment .env-pocket{box-shadow:inset 0 0 22px rgba(120,80,30,.35),inset 0 0 3px rgba(90,60,20,.5)}.mt-parchment .env-back{border-radius:4px 7px 5px 8px}
 
 .mail-letter{background-color:var(--l-bg);background-image:var(--l-tex);background-size:var(--l-tex-size,auto);color:var(--l-ink);font-family:var(--l-font);border:var(--l-border);box-shadow:0 30px 60px -20px rgba(0,0,0,.55)}
 .mail-letter .m-head{font-family:var(--l-head);color:var(--l-accent)}
