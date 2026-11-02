@@ -90,8 +90,8 @@ export function mailKeyFrom(theme?: { mail?: MailKey; bg?: string; border?: stri
 const esc = (s: string) => s.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]!);
 
 export type ExportInput = {
-  title: string; body: string; author?: string; createdAt: number; images: string[];
-  audio?: { name: string; src: string }; autoplay?: boolean; mail: MailKey;
+  title: string; body: string; author?: string | undefined; createdAt: number; images: string[];
+  audio?: { name: string; src: string } | undefined; autoplay?: boolean | undefined; mail: MailKey;
 };
 
 /** Build a single self-contained, offline HTML file with the same envelope animation. */
