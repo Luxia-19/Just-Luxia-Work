@@ -1,4 +1,7 @@
+import type { MailKey } from "./mail-styles";
+
 export type CardTheme = {
+  mail?: MailKey; // tactile envelope + letter theme
   bg: string; // background color or gradient (CSS)
   border: BorderStyleKey;
   font: FontKey;
@@ -53,11 +56,11 @@ export const BORDERS: Record<BorderStyleKey, { label: string; css: React.CSSProp
 export const CARD_PRESETS: { name: string; theme: CardTheme }[] = [
   {
     name: "Vintage Parchment",
-    theme: { bg: "linear-gradient(160deg, #f5ead6, #e8d9bc)", border: "stamp", font: "serif", text: "#4a3b28", accent: "#8a6d3b" },
+    theme: { mail: "parchment", bg: "linear-gradient(160deg, #f5ead6, #e8d9bc)", border: "stamp", font: "serif", text: "#4a3b28", accent: "#8a6d3b" },
   },
   {
     name: "Midnight Sky",
-    theme: { bg: "linear-gradient(160deg, #1b2340, #0e1226)", border: "hairline", font: "serif", text: "#dfe6ff", accent: "#8fa3e8" },
+    theme: { mail: "velvet", bg: "linear-gradient(160deg, #1b2340, #0e1226)", border: "hairline", font: "serif", text: "#dfe6ff", accent: "#8fa3e8" },
   },
   {
     name: "Cyberpunk Letter",
