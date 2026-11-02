@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Menu, SlidersHorizontal, Plus, X, Music, Image as ImageIcon, Play, Pause, Trash2, Archive,
-  Lock, Share2, Search, ChevronLeft, ChevronRight, Mail, Pencil, Palette, MailOpen,
+  Lock, Share2, Search, ChevronLeft, ChevronRight, Mail, Pencil, Palette,
 } from "lucide-react";
 import {
   type Postcard, type Profile, type SortKey, type AppThemeKey, type CardTheme,
@@ -18,6 +18,8 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Write atmospheric postcard notes with photos, themes and background audio." },
       { property: "og:title", content: "Postcard Notes" },
       { property: "og:description", content: "A personal diary of postcards with photos and sound." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: App,
@@ -25,11 +27,6 @@ export const Route = createFileRoute("/")({
 
 const fmt = (t: number) =>
   new Date(t).toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
-
-const cardStyle = (t?: CardTheme): React.CSSProperties =>
-  t
-    ? { background: t.bg, color: t.text, fontFamily: FONTS[t.font].css, ...BORDERS[t.border].css }
-    : {};
 
 function App() {
   const [cards, setCards] = useState<Postcard[]>([]);
