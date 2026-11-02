@@ -6,9 +6,10 @@ import {
 } from "lucide-react";
 import {
   type Postcard, type Profile, type SortKey, type AppThemeKey, type CardTheme,
-  APP_THEMES, CARD_PRESETS, FONTS, BORDERS, defaultCardTheme,
+  APP_THEMES, defaultCardTheme,
   loadCards, saveCards, loadProfile, saveProfile, loadTheme, saveTheme, readFile, filterCards, dayKey,
 } from "@/lib/postcards";
+import { MAIL_CSS, MAIL_THEMES, mailTheme, mailKeyFrom, downloadMail } from "@/lib/mail-styles";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -60,6 +61,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <style dangerouslySetInnerHTML={{ __html: MAIL_CSS }} />
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/90 px-4 py-3 backdrop-blur">
         <IconBtn label="Open settings" onClick={() => setLeft(true)}><Menu /></IconBtn>
         <h1 className="font-display text-2xl italic tracking-tight">Postcard Notes</h1>
@@ -202,20 +204,20 @@ function Drawer({ side, open, onClose, children }: { side: "left" | "right"; ope
 }
 
 function CardSnippet({ c, i, onClick }: { c: Postcard; i: number; onClick: () => void }) {
+  const mk = mailKeyFrom(c.theme);
   return (
-    <button onClick={onClick}
-      style={{ rotate: `${((i % 3) - 1) * 0.6}deg`, ...cardStyle(c.theme) }}
-      className={`group relative flex aspect-[3/2] flex-col overflow-hidden rounded-md p-5 text-left shadow-card transition-all duration-300 hover:-translate-y-1 hover:rotate-0 hover:shadow-lift ${c.theme ? "" : "border border-border bg-card"}`}>
-      <div className="airmail-edge absolute inset-x-0 top-0 h-1 opacity-60" />
-      <div className="absolute right-4 top-4 grid size-12 place-items-center rounded-sm stamp-perf" style={c.theme ? { background: `${c.theme.accent}22` } : undefined}>
-        {c.audio ? <Music className="size-5" style={c.theme ? { color: c.theme.accent } : undefined} /> : c.private ? <Lock className="size-5 text-primary" /> : <Mail className="size-5 text-primary" />}
+    <button onClick={onClick} style={{ rotate: `${((i % 3) - 1) * 0.6}deg` }}
+      className={`mt-${mk} mail-letter group relative flex aspect-[3/2] flex-col overflow-hidden rounded-md p-5 text-left transition-all duration-300 hover:-translate-y-1 hover:rotate-0`}>
+      <div className="absolute right-4 top-4 grid h-14 w-12 place-items-center text-xl outline-2 -outline-offset-4 outline-dashed outline-current/40" style={{ rotate: "4deg" }}>
+        {mailTheme(mk).emoji}
       </div>
       <p className="text-xs uppercase tracking-widest opacity-60">{fmt(c.createdAt)}</p>
-      <h2 className="mt-2 line-clamp-2 pr-14 text-2xl leading-tight" style={c.theme ? { color: c.theme.accent } : undefined}>{c.title || "Untitled"}</h2>
+      <h2 className="m-head mt-2 line-clamp-2 pr-14 text-2xl leading-tight">{c.title || "Untitled"}</h2>
       <p className="mt-2 line-clamp-2 text-sm opacity-75">{c.body}</p>
       <div className="mt-auto flex gap-2 pt-3 text-xs">
-        {c.audio && <span className="flex items-center gap-1 rounded-full bg-foreground/10 px-2 py-1"><Music className="size-3" />Audio</span>}
-        {c.images.length > 0 && <span className="flex items-center gap-1 rounded-full bg-foreground/10 px-2 py-1"><ImageIcon className="size-3" />{c.images.length} photo{c.images.length > 1 ? "s" : ""}</span>}
+        {c.private && <span className="m-badge flex items-center gap-1 rounded-full px-2 py-1"><Lock className="size-3" />Private</span>}
+        {c.audio && <span className="m-badge flex items-center gap-1 rounded-full px-2 py-1"><Music className="size-3" />Audio</span>}
+        {c.images.length > 0 && <span className="m-badge flex items-center gap-1 rounded-full px-2 py-1"><ImageIcon className="size-3" />{c.images.length} photo{c.images.length > 1 ? "s" : ""}</span>}
       </div>
     </button>
   );
@@ -275,15 +277,25 @@ function EnvelopeView({ c, onClose, onChange, onEdit, onDelete }: {
   const [stage, setStage] = useState<"sealed" | "flap" | "slide" | "open">("sealed");
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [photosOut, setPhotosOut] = useState(false);
+  const [playing, setPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
-  const t = c.theme;
+  const mk = mailKeyFrom(c.theme);
+  const m = mailTheme(mk);
+
+  useEffect(() => {
+    const a = audioRef.current;
+    if (!a) return;
+    const on = () => setPlaying(!a.paused);
+    a.addEventListener("play", on); a.addEventListener("pause", on);
+    return () => { a.removeEventListener("play", on); a.removeEventListener("pause", on); };
+  }, [c.audio?.src]);
 
   const unseal = () => {
     if (stage !== "sealed") return;
-    setStage("flap");
     if (c.audio?.src && c.autoplay !== false) audioRef.current?.play().catch(() => {});
+    setStage("flap");
     setTimeout(() => setStage("slide"), 620);
-    setTimeout(() => setStage("open"), 1450);
+    setTimeout(() => setStage("open"), 1550);
   };
 
   const share = async () => {
@@ -291,108 +303,81 @@ function EnvelopeView({ c, onClose, onChange, onEdit, onDelete }: {
     if (navigator.share) await navigator.share({ title: c.title, text }).catch(() => {});
     else await navigator.clipboard.writeText(text);
   };
-
-  const envBg = t ? t.bg : "linear-gradient(160deg, var(--card), var(--secondary))";
-  const envColor = t ? t.text : "var(--foreground)";
+  const exportMail = () => downloadMail({ ...c, mail: mk });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/50 p-4 backdrop-blur-sm" onClick={onClose}>
+    <div className={`mt-${mk} fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-foreground/60 p-4 backdrop-blur-sm`} onClick={onClose}>
       {c.audio && <audio ref={audioRef} src={c.audio.src} loop />}
+      {c.audio && stage !== "sealed" && (
+        <button onClick={(e) => { e.stopPropagation(); const a = audioRef.current; if (a) a.paused ? a.play() : a.pause(); }}
+          aria-label={playing ? "Pause music" : "Play music"}
+          className="glass fixed right-4 top-4 z-[55] flex max-w-[60vw] items-center gap-2 rounded-full px-3 py-1.5 text-xs shadow-lift">
+          {playing ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
+          <span className="truncate">{c.audio.name}</span>
+        </button>
+      )}
 
       {stage !== "open" ? (
-        /* ---- Sealed / opening envelope ---- */
-        <div onClick={(e) => e.stopPropagation()} className="flex flex-col items-center gap-6">
-          <div style={{ perspective: "1000px" }}>
-            <div className="relative h-56 w-80 sm:h-64 sm:w-96" style={{ color: envColor }}>
-              {/* letter inside */}
-              <div
-                className="absolute inset-x-3 top-2 bottom-2 rounded-sm p-4 shadow-card transition-all duration-[800ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
-                style={{
-                  background: envBg,
-                  transform: stage === "slide" ? "translateY(-105%) scale(1.02)" : "translateY(0)",
-                  zIndex: stage === "slide" ? 30 : 1,
-                }}
-              >
-                <p className="text-[10px] uppercase tracking-widest opacity-60">{fmt(c.createdAt)}</p>
-                <p className="mt-1 line-clamp-2 text-lg leading-tight" style={t ? { color: t.accent, fontFamily: FONTS[t.font].css } : undefined}>{c.title || "Untitled"}</p>
+        <div onClick={(e) => e.stopPropagation()} className="flex flex-col items-center gap-8">
+          <div className="env-scene">
+            <div role="button" tabIndex={0} aria-label="Break the seal and open the letter" onClick={unseal}
+              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && unseal()}
+              className={`env ${stage !== "sealed" ? "is-flap" : ""} ${stage === "slide" ? "is-slide" : ""}`}>
+              <div className="env-back" />
+              <div className="env-letter">
+                <div className="ld">{fmt(c.createdAt)}</div>
+                <div className="lt">{c.title || "Untitled"}</div>
               </div>
-              {/* envelope pocket (front) */}
-              <div
-                className="absolute inset-0 z-10 rounded-md shadow-lift"
-                style={{
-                  background: envBg,
-                  filter: "brightness(0.94)",
-                  clipPath: "polygon(0 0, 50% 42%, 100% 0, 100% 100%, 0 100%)",
-                }}
-              />
-              {/* stamp */}
-              <div className="absolute right-3 top-3 z-20 grid size-11 place-items-center rounded-sm stamp-perf"
-                style={{ background: t ? `${t.accent}33` : "var(--accent)", transform: "rotate(3deg)" }}>
-                <Mail className="size-5" style={t ? { color: t.accent } : undefined} />
-              </div>
-              {/* flap */}
-              <div
-                className="absolute inset-x-0 top-0 z-20 h-[45%] origin-top rounded-t-md transition-transform duration-[600ms] ease-out"
-                style={{
-                  background: envBg,
-                  filter: "brightness(1.06)",
-                  clipPath: "polygon(0 0, 100% 0, 50% 100%)",
-                  transform: stage === "sealed" ? "rotateX(0deg)" : "rotateX(180deg)",
-                  transformStyle: "preserve-3d",
-                  backfaceVisibility: "visible",
-                  zIndex: stage === "sealed" ? 20 : 5,
-                }}
-              />
+              <div className="env-pocket" />
+              {mk === "parchment" && <div className="env-mark" />}
+              <div className="env-stamp">{m.emoji}</div>
+              <div className="env-addr">for you{c.author ? `, from ${c.author}` : ""}</div>
+              <div className="env-flap"><div className="env-flap-face" /><div className="env-seal">{m.seal}</div></div>
             </div>
           </div>
-          {stage === "sealed" ? (
-            <button onClick={unseal}
-              className="flex items-center gap-2 rounded-full bg-primary px-6 py-3 font-medium text-primary-foreground shadow-lift transition-transform duration-300 hover:scale-105">
-              <MailOpen className="size-5" /> Unseal this letter
-            </button>
-          ) : (
-            <p className="animate-pulse text-sm text-primary-foreground/90">Opening…</p>
-          )}
-          <button onClick={onClose} className="text-sm text-primary-foreground/80 underline underline-offset-4">Back to board</button>
+          <p className={`text-sm text-primary-foreground/85 ${stage === "sealed" ? "animate-pulse" : "opacity-0"}`}>
+            Tap the envelope to break the seal
+          </p>
+          <div className="flex gap-3 text-sm">
+            <button onClick={onClose} className="text-primary-foreground/80 underline underline-offset-4">Back to board</button>
+            <button onClick={exportMail} className="text-primary-foreground/80 underline underline-offset-4">✨ Export Interactive Mail (.html)</button>
+          </div>
         </div>
       ) : (
-        /* ---- Expanded letter ---- */
         <div onClick={(e) => e.stopPropagation()}
-          style={cardStyle(t)}
-          className={`mx-auto flex h-full max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden shadow-lift sm:rounded-lg ${t ? "" : "border border-border bg-card"}`}>
-          <div className="airmail-edge h-2 shrink-0" />
-          <div className="space-y-3 border-b p-5" style={t ? { borderColor: `${t.text}33`, background: `${t.accent}14` } : undefined}>
+          className="mail-letter letter-in mx-auto flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg">
+          <div className="space-y-3 p-5 pb-3">
             <div className="flex items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs uppercase tracking-widest opacity-60">{fmt(c.createdAt)}{c.author ? ` · ${c.author}` : ""}</p>
-                <h2 className="text-3xl leading-tight" style={t ? { color: t.accent } : undefined}>{c.title || "Untitled"}</h2>
+                <h2 className="m-head mt-1 text-4xl leading-tight">{c.title || "Untitled"}</h2>
               </div>
-              <div className="flex gap-1">
-                <IconBtn label="Customize theme" onClick={onEdit}><Palette /></IconBtn>
+              <div className="flex shrink-0 gap-1">
+                <IconBtn label="Change theme" onClick={onEdit}><Palette /></IconBtn>
                 <IconBtn label="Close" onClick={onClose}><X /></IconBtn>
               </div>
             </div>
             {c.audio && (
-              <AudioBar audio={c.audio} audioRef={audioRef} autoplay={!!c.autoplay} dark={!!t}
-                onToggleAutoplay={() => onChange({ ...c, autoplay: !c.autoplay })} />
+              <AudioBar audio={c.audio} audioRef={audioRef} autoplay={c.autoplay !== false} dark
+                onToggleAutoplay={() => onChange({ ...c, autoplay: c.autoplay === false })} />
             )}
+            <div className="m-div" />
           </div>
-          <div className="relative flex-1 overflow-y-auto p-5">
+          <div className="flex-1 overflow-y-auto px-5 pb-5">
             <p className="whitespace-pre-wrap text-lg leading-relaxed">{c.body}</p>
-            {/* 💌 hidden photo envelope, bottom-left */}
+            <div className="m-div mt-6" />
             {c.images.length > 0 && (
-              <div className="sticky bottom-0 mt-8 flex items-end gap-3">
+              <div className="mt-4 flex min-h-16 items-end gap-3">
                 <button aria-label="Open photo envelope" onClick={() => setPhotosOut((v) => !v)}
-                  className="grid size-12 shrink-0 place-items-center rounded-full border text-xl shadow-card transition-transform duration-300 hover:scale-110"
-                  style={t ? { borderColor: `${t.text}44`, background: `${t.accent}22` } : { borderColor: "var(--border)", background: "var(--secondary)" }}>
+                  className="m-badge grid size-12 shrink-0 place-items-center rounded-full text-xl transition-transform duration-300 hover:scale-110">
                   💌
                 </button>
                 {photosOut && (
-                  <div className="flex gap-2 overflow-x-auto pb-1" style={{ perspective: "600px" }}>
+                  <div className="flex gap-3 overflow-x-auto px-1 py-2">
                     {c.images.map((src, i) => (
-                      <button key={i} onClick={() => setLightbox(src)} className="envelope-photo shrink-0"
-                        style={{ animationDelay: `${i * 90}ms` }}>
-                        <img src={src} alt="" className="h-24 w-20 rounded-md border border-black/10 object-cover shadow-card transition-transform duration-300 hover:-translate-y-1" />
+                      <button key={i} onClick={() => setLightbox(src)} className="photo-card photo-pull shrink-0"
+                        style={{ animationDelay: `${i * 90}ms`, ["--r" as string]: `${((i % 3) - 1) * 4}deg` }}>
+                        <img src={src} alt="" className="h-24 w-20 object-cover" />
                       </button>
                     ))}
                   </div>
@@ -400,7 +385,8 @@ function EnvelopeView({ c, onClose, onChange, onEdit, onDelete }: {
               </div>
             )}
           </div>
-          <div className="flex flex-wrap gap-2 border-t p-4 text-sm" style={t ? { borderColor: `${t.text}33` } : undefined}>
+          <div className="flex flex-wrap gap-2 border-t border-current/20 p-4 text-sm">
+            <Act onClick={exportMail}>✨ Export Interactive Mail (.html)</Act>
             <Act onClick={onEdit}><Pencil className="size-4" />Edit</Act>
             <Act onClick={share}><Share2 className="size-4" />Share</Act>
             <Act onClick={() => onChange({ ...c, private: !c.private })}><Lock className="size-4" />{c.private ? "Make public" : "Make private"}</Act>
@@ -411,9 +397,9 @@ function EnvelopeView({ c, onClose, onChange, onEdit, onDelete }: {
       )}
 
       {lightbox && (
-        <div className="fixed inset-0 z-[60] grid place-items-center bg-black/85 p-4" onClick={() => setLightbox(null)}>
+        <div className="fixed inset-0 z-[60] grid place-items-center bg-foreground/40 p-4 backdrop-blur-md" onClick={(e) => { e.stopPropagation(); setLightbox(null); }}>
           <img src={lightbox} alt="" className="max-h-full max-w-full rounded-md shadow-lift" />
-          <button aria-label="Close photo" className="absolute right-4 top-4 grid size-10 place-items-center rounded-full bg-white/10 text-white"><X className="size-5" /></button>
+          <button aria-label="Close photo" className="glass absolute right-4 top-4 grid size-10 place-items-center rounded-full"><X className="size-5" /></button>
         </div>
       )}
     </div>
@@ -434,6 +420,7 @@ function Editor({ initial, author, onClose, onSave }: {
   const [showTheme, setShowTheme] = useState(false);
   const th = c.theme ?? defaultCardTheme();
   const setTh = (patch: Partial<CardTheme>) => setC({ ...c, theme: { ...th, ...patch } });
+  const mk = mailKeyFrom(c.theme);
 
   const addImages = async (fs: FileList | null) => {
     if (!fs) return;
@@ -460,9 +447,9 @@ function Editor({ initial, author, onClose, onSave }: {
         </div>
 
         {/* live preview strip */}
-        <div className="rounded-md p-4 shadow-card" style={cardStyle(c.theme)}>
-          <p className="text-[10px] uppercase tracking-widest opacity-60">Preview</p>
-          <p className="text-xl leading-tight" style={{ color: th.accent }}>{c.title || "Untitled"}</p>
+        <div className={`mt-${mk} mail-letter rounded-md p-4`}>
+          <p className="text-[10px] uppercase tracking-widest opacity-60">Preview · {mailTheme(mk).label}</p>
+          <p className="m-head text-2xl leading-tight">{c.title || "Untitled"}</p>
           <p className="mt-1 line-clamp-2 text-sm opacity-80">{c.body || "Dear diary…"}</p>
         </div>
 
@@ -472,46 +459,18 @@ function Editor({ initial, author, onClose, onSave }: {
           className="w-full rounded-md border border-input bg-background px-3 py-2 font-display outline-none focus:ring-2 focus:ring-ring" />
 
         {showTheme && (
-          <div className="space-y-3 rounded-md border border-border bg-background p-4 text-sm">
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Preset themes</p>
-            <div className="flex flex-wrap gap-2">
-              {CARD_PRESETS.map((p) => (
-                <button type="button" key={p.name} onClick={() => setC({ ...c, theme: { ...p.theme } })}
-                  className="rounded-full border border-border px-3 py-1.5 text-xs shadow-card transition-transform hover:scale-105"
-                  style={{ background: p.theme.bg, color: p.theme.text }}>
-                  {p.name}
+          <div className="space-y-2 rounded-md border border-border bg-background p-3 text-sm">
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Envelope & letter theme</p>
+            <div className="grid gap-2">
+              {MAIL_THEMES.map((t) => (
+                <button type="button" key={t.key} onClick={() => setTh({ mail: t.key })}
+                  className={`flex items-center gap-3 rounded-md border px-3 py-2 text-left transition-colors ${mk === t.key ? "border-primary bg-accent font-medium" : "border-border hover:bg-muted"}`}>
+                  <span className="flex shrink-0 overflow-hidden rounded-full border border-border">
+                    <span className="size-5" style={{ background: t.swatch[0] }} /><span className="size-5" style={{ background: t.swatch[1] }} />
+                  </span>
+                  <span>{t.emoji} {t.label}</span>
                 </button>
               ))}
-            </div>
-            <p className="pt-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">Customize</p>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block">Background
-                <input type="color" value={toHex(th.bg)} onChange={(e) => setTh({ bg: e.target.value })} className="mt-1 h-9 w-full cursor-pointer rounded border border-input" />
-              </label>
-              <label className="block">Text color
-                <input type="color" value={toHex(th.text)} onChange={(e) => setTh({ text: e.target.value })} className="mt-1 h-9 w-full cursor-pointer rounded border border-input" />
-              </label>
-              <label className="block">Accent tint
-                <input type="color" value={toHex(th.accent)} onChange={(e) => setTh({ accent: e.target.value })} className="mt-1 h-9 w-full cursor-pointer rounded border border-input" />
-              </label>
-              <label className="block">Font
-                <select value={th.font} onChange={(e) => setTh({ font: e.target.value as CardTheme["font"] })}
-                  className="mt-1 w-full rounded-md border border-input bg-card px-2 py-2">
-                  {Object.entries(FONTS).map(([k, f]) => <option key={k} value={k}>{f.label}</option>)}
-                </select>
-              </label>
-            </div>
-            <div>
-              <span>Border style</span>
-              <div className="mt-1 grid grid-cols-2 gap-2">
-                {Object.entries(BORDERS).map(([k, b]) => (
-                  <button type="button" key={k} onClick={() => setTh({ border: k as CardTheme["border"] })}
-                    className={`rounded-md px-2 py-2 text-xs ${th.border === k ? "bg-accent font-medium ring-2 ring-ring" : "bg-card"}`}
-                    style={b.css}>
-                    {b.label}
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
         )}
@@ -554,12 +513,6 @@ function Editor({ initial, author, onClose, onSave }: {
       </form>
     </div>
   );
-}
-
-/* Extract a hex color from a CSS color/gradient for <input type=color> */
-function toHex(css: string): string {
-  const m = css.match(/#[0-9a-fA-F]{6}/);
-  return m ? m[0] : "#f5ead6";
 }
 
 function MiniCal({ cards, day, setDay }: { cards: Postcard[]; day: string | null; setDay: (d: string | null) => void }) {
