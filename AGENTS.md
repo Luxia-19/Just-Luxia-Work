@@ -8,3 +8,4 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+- Mail themes & envelope CSS live in src/lib/mail-styles.ts as one CSS string shared by the app and the .html export, so both stay visually identical.
