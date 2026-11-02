@@ -6,3 +6,5 @@
 - [x] 💌 hidden photo envelope in letter footer → photo thumbnails slide out → fullscreen lightbox
 - [x] Audio bar with seek slider + autoplay toggle
 - [x] Verify build + browser check (envelope flow + theme switch verified; photo lightbox not exercised — seed cards have no photos)
+- [x] Tactile 3D envelope redesign (flap, seams, wax seal, stamp, postmarks) + 5 textured mail themes
+- [x] Interactive Mail .html export (offline, embedded audio/photos, same animation)
