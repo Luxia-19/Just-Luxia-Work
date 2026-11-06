@@ -1,32 +1,89 @@
 import type { MailKey } from "./mail-styles";
 
 export type CardTheme = {
-  mail?: MailKey; // tactile envelope + letter theme
-  bg: string; // background color or gradient (CSS)
-  border: BorderStyleKey;
-  font: FontKey;
-  text: string; // text color (CSS)
-  accent: string; // header tint (CSS color)
+  mail?: MailKey; // legacy single-preset theme
+  canvas?: MailKey;
+  paper?: MailKey;
+  emblem?: MailKey;
+  titleFont?: MailKey;
 };
 
-export type BorderStyleKey = "stamp" | "gold" | "hairline" | "neon";
 export type FontKey = "serif" | "script" | "mono" | "sans";
+
+export type ChildEnvelope = {
+  id: string;
+  title: string;
+  body: string;
+  author?: string;
+  recipient?: string;
+  theme?: CardTheme;
+  locked?: boolean;
+  clue?: string;
+  passphrase?: string;
+  /** Up to 3 manual sheets for the child letter. */
+  pages?: string[];
+  /** Attached photos (data URLs). */
+  images?: string[];
+  /** Zero-based sheet index for each image. */
+  imagePages?: number[];
+  /** Per-sheet audio clips (NOT theme background audio). */
+  pageAudios?: { name: string; src: string }[];
+  /** Zero-based sheet index for each audio clip. */
+  audioPages?: number[];
+  /** Which parent sheet this child envelope icon is pinned to (0-based, default 0 = tray). */
+  pinnedToSheet?: number;
+};
 
 export type Postcard = {
   id: string;
   title: string;
   body: string;
   author?: string;
+  recipient?: string;
   createdAt: number;
   images: string[];
   audio?: { name: string; src: string } | undefined;
+  /** Audio clips pinned to individual letter sheets. */
+  pageAudios?: { name: string; src: string }[];
+  /** Zero-based sheet index for each audio clip in pageAudios. */
+  audioPages?: number[];
   autoplay?: boolean;
   theme?: CardTheme;
+  bodyStyle?: { color?: string; font?: FontKey };
+  /** Manually authored sheets; each entry is one fixed letter page. */
+  pages?: string[];
+  /** Zero-based sheet index for each image in images. */
+  imagePages?: number[];
   archived?: boolean;
   private?: boolean;
+  childEnvelopes?: ChildEnvelope[];
 };
 
-export type Profile = { name: string; email: string; bio: string };
+export type Profile = { name: string; email: string; bio: string; defaultRecipient?: string };
+
+/** Fixed-size letter pagination: one page is visible at a time, up to 19 pages. */
+export const LETTER_PAGE_CHARACTERS = 420;
+export const MAX_LETTER_PAGES = 19;
+export const MAX_LETTER_CHARACTERS = LETTER_PAGE_CHARACTERS * MAX_LETTER_PAGES;
+export const MAX_LETTER_TITLE_CHARACTERS = 90;
+
+export const paginateLetter = (body: string) => {
+  if (!body) return [""];
+  const pages: string[] = [];
+  let start = 0;
+  while (start < body.length && pages.length < MAX_LETTER_PAGES) {
+    const limit = Math.min(start + LETTER_PAGE_CHARACTERS, body.length);
+    let end = limit;
+    if (limit < body.length) {
+      const breakAt = body.slice(start, limit).search(/\s(?=[^\s]*$)/);
+      if (breakAt > LETTER_PAGE_CHARACTERS * 0.55) end = start + breakAt;
+    }
+    pages.push(body.slice(start, end).trim());
+    start = end;
+    while (/\s/.test(body[start] ?? "")) start += 1;
+  }
+  return pages.length ? pages : [""];
+};
 
 export type AppThemeKey = "paper" | "dark" | "cyber" | "matcha" | "pastel" | "lotus";
 
@@ -46,63 +103,19 @@ export const FONTS: Record<FontKey, { label: string; css: string }> = {
   sans: { label: "Clean Sans", css: '"Karla", system-ui, sans-serif' },
 };
 
-export const BORDERS: Record<BorderStyleKey, { label: string; css: React.CSSProperties }> = {
-  stamp: { label: "Dashed stamp edge", css: { border: "2px dashed currentColor" } },
-  gold: { label: "Gold foil", css: { border: "3px double #c9a227" } },
-  hairline: { label: "Minimalist hairline", css: { border: "1px solid currentColor" } },
-  neon: { label: "Neon glow", css: { border: "1px solid #22d3ee", boxShadow: "0 0 12px #22d3ee66, inset 0 0 12px #22d3ee22" } },
-};
-
-export const CARD_PRESETS: { name: string; theme: CardTheme }[] = [
-  {
-    name: "Vintage Parchment",
-    theme: { mail: "parchment", bg: "linear-gradient(160deg, #f5ead6, #e8d9bc)", border: "stamp", font: "serif", text: "#4a3b28", accent: "#8a6d3b" },
-  },
-  {
-    name: "Midnight Sky",
-    theme: { mail: "velvet", bg: "linear-gradient(160deg, #1b2340, #0e1226)", border: "hairline", font: "serif", text: "#dfe6ff", accent: "#8fa3e8" },
-  },
-  {
-    name: "Cyberpunk Letter",
-    theme: { bg: "linear-gradient(160deg, #141126, #1e0f2e)", border: "neon", font: "mono", text: "#7df9ff", accent: "#ff5da2" },
-  },
-  {
-    name: "Sakura Flower",
-    theme: { bg: "linear-gradient(160deg, #ffeef3, #ffd9e4)", border: "hairline", font: "script", text: "#7a3b52", accent: "#e58aa5" },
-  },
-  {
-    name: "Matcha Press",
-    theme: { bg: "linear-gradient(160deg, #eef3e6, #dde8cf)", border: "gold", font: "sans", text: "#3c4a2e", accent: "#6b8a4f" },
-  },
-];
-
-export const defaultCardTheme = (): CardTheme => ({ ...CARD_PRESETS[0]!.theme });
+export const defaultCardTheme = (): CardTheme => ({
+  mail: "parchment",
+  canvas: "parchment",
+  paper: "parchment",
+  emblem: "parchment",
+  titleFont: "parchment",
+});
 
 const KEY = "postcards.v1";
 const PKEY = "postcards.profile";
 const TKEY = "postcards.theme";
 
-export const seed: Postcard[] = [
-  {
-    id: "s1",
-    title: "Rain over the Mekong",
-    body: "The sky turned slate by four. Tuk-tuks hissed past, and the café owner turned up an old Sinn Sisamouth record. I stayed for a second coffee just to hear it end.",
-    author: "Traveler",
-    createdAt: Date.now() - 86400000 * 2,
-    images: [],
-    theme: { ...CARD_PRESETS[0]!.theme },
-  },
-  {
-    id: "s2",
-    title: "Letter to future me",
-    body: "Remember how it felt to start something without knowing how it ends. Keep that.",
-    author: "Traveler",
-    createdAt: Date.now() - 86400000 * 9,
-    images: [],
-    private: true,
-    theme: { ...CARD_PRESETS[1]!.theme },
-  },
-];
+export const seed: Postcard[] = [];
 
 const safe = <T>(k: string, fb: T): T => {
   try {
@@ -121,9 +134,9 @@ const save = (k: string, v: unknown) => {
   }
 };
 
-export const loadCards = () => safe<Postcard[]>(KEY, seed);
+export const loadCards = () => safe<Postcard[]>(KEY, seed).filter((card) => card.id !== "s1" && card.id !== "s2");
 export const saveCards = (c: Postcard[]) => save(KEY, c);
-export const loadProfile = () => safe<Profile>(PKEY, { name: "Traveler", email: "", bio: "" });
+export const loadProfile = () => safe<Profile>(PKEY, { name: "Traveler", email: "", bio: "", defaultRecipient: "you" });
 export const saveProfile = (p: Profile) => save(PKEY, p);
 export const loadTheme = () => safe<AppThemeKey>(TKEY, "paper");
 export const saveTheme = (t: AppThemeKey) => save(TKEY, t);
@@ -146,7 +159,7 @@ export function filterCards(
     .filter((c) =>
       o.view === "archive" ? c.archived : o.view === "private" ? c.private && !c.archived : !c.archived,
     )
-    .filter((c) => !q || c.title.toLowerCase().includes(q) || c.body.toLowerCase().includes(q))
+    .filter((c) => !q || c.title.toLowerCase().includes(q) || c.body.toLowerCase().includes(q) || (c.author && c.author.toLowerCase().includes(q)) || (c.recipient && c.recipient.toLowerCase().includes(q)))
     .filter((c) => !o.day || dayKey(c.createdAt) === o.day)
     .sort((a, b) =>
       o.sort === "az" ? a.title.localeCompare(b.title) : o.sort === "old" ? a.createdAt - b.createdAt : b.createdAt - a.createdAt,

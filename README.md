@@ -136,3 +136,15 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
+## Cloudflare deployment
+
+The Worker is configured as `yourluxia`. Cloudflare serves it at `https://yourluxia.<your-workers.dev-subdomain>.workers.dev`; the account subdomain must be enabled in Cloudflare and is account-specific.
+
+Authenticate once with `npx wrangler login`, then build and deploy with:
+
+```sh
+npm run deploy:cloudflare
+```
+
+The website is public to anyone with the URL. Postcards remain in each browser's local storage and are not uploaded or synced. Exported HTML files contain their postcard content, so share those files only with intended recipients.

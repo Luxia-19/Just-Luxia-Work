@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "yourluxia",
+  "main": ".output/server/index.mjs",
+  "compatibility_date": "2026-11-02",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": ".output/public"
+  },
+  "no_bundle": true,
+  "workers_dev": true,
+  "rules": [
+    {
+      "type": "ESModule",
+      "globs": ["**/*.mjs", "**/*.js"]
+    }
+  ]
+}

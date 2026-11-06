@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <path fill="#bf3933" d="M18 10h92v108H18z"/>
+  <path fill="#faf6f0" fill-rule="evenodd" d="M25 18h78v92H25V18Zm5 6v80h68V24H30Z" clip-rule="evenodd"/>
+  <g fill="#faf6f0" font-family="serif" font-weight="700" text-anchor="middle">
+    <text x="64" y="60" font-size="35">旅</text>
+    <text x="64" y="94" font-size="35">人</text>
+  </g>
+  <path stroke="#faf6f0" stroke-opacity=".65" stroke-width="2" d="M34 17v94m60-94v94"/>
+</svg>
